@@ -1,0 +1,3 @@
+[D-BUS Service]
+Name=com.github.j1g5awi.vscode
+Exec=/usr/bin/python3 -m krunner_vscode"

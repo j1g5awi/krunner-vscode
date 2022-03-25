@@ -1,0 +1,16 @@
+[tool.poetry]
+name = "krunner-vscode"
+version = "0.1.0"
+description = ""
+authors = ["jigsaw <j1g5aw@foxmail.com>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.9"
+dbus-python = "^1.2.18"
+PyGObject = "^3.42.0"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
