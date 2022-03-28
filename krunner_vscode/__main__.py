@@ -27,22 +27,22 @@ class Match(NamedTuple):
 # TODO Check VSCode or Code - OSS or VSCodium
 
 # Read path_list from database
-con = sqlite3.connect(
-    os.path.join(
-        os.environ["HOME"], ".config", "Code - OSS/User/globalStorage/state.vscdb"
+def get_path_list():
+    con = sqlite3.connect(
+        os.path.join(
+            os.environ["HOME"], ".config", "Code - OSS/User/globalStorage/state.vscdb"
+        )
     )
-)
-cur = con.cursor()
-rows = cur.execute(
-    "SELECT value FROM ItemTable WHERE key = 'history.recentlyOpenedPathsList'"
-)
-data = json.loads(rows.fetchone()[0])
-con.close()
-path_list = [
-    "~" + path[len(os.environ["HOME"]) :]
-    for path in [i["folderUri"][7:] for i in data["entries"] if "folderUri" in i]
-    if os.environ["HOME"] in path
-]
+    cur = con.cursor()
+    rows = cur.execute(
+        "SELECT value FROM ItemTable WHERE key = 'history.recentlyOpenedPathsList'"
+    )
+    data = json.loads(rows.fetchone()[0])
+    con.close()
+    return [
+        "~" + path[len(os.environ["HOME"]) :] if os.environ["HOME"] in path else path
+        for path in [i["folderUri"][7:] for i in data["entries"] if "folderUri" in i]
+    ]
 
 
 class Runner(dbus.service.Object):
@@ -67,7 +67,7 @@ class Runner(dbus.service.Object):
                 1.0,
                 {"subtext": path},
             )
-            for path in path_list
+            for path in get_path_list()
             if query in path
         ]
 
