@@ -68,7 +68,7 @@ class Runner(dbus.service.Object):
                 {"subtext": path},
             )
             for path in get_path_list()
-            if query in path
+            if query.lower() in path.lower()
         ]
 
     @dbus.service.method(iface, out_signature="a(sss)")
