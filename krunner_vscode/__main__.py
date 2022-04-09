@@ -1,7 +1,7 @@
 import json
 import os
-import pathlib
 import sqlite3
+from pathlib import Path
 from typing import NamedTuple
 
 import dbus.service
@@ -61,14 +61,14 @@ class Runner(dbus.service.Object):
         return [
             Match(
                 path,
-                pathlib.Path(path).name,
+                Path(path).name,
                 "com.visualstudio.code.oss",
                 100,
                 1.0,
                 {"subtext": path},
             )
             for path in get_path_list()
-            if query.lower() in path.lower()
+            if query.lower() in Path(path).name.lower()
         ]
 
     @dbus.service.method(iface, out_signature="a(sss)")
