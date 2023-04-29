@@ -15,6 +15,13 @@ objpath = "/vscode"
 iface = "org.kde.krunner1"
 
 
+VSCODE_DIRS = [
+    "Code",
+    "Code - OSS",
+    "VSCodium"
+]
+
+
 class Match(NamedTuple):
     data: str
     display_text: str
@@ -24,25 +31,31 @@ class Match(NamedTuple):
     properties: dict
 
 
-# TODO Check VSCode or Code - OSS or VSCodium
-
 # Read path_list from database
 def get_path_list():
-    con = sqlite3.connect(
-        os.path.join(
-            os.environ["HOME"], ".config", "Code - OSS/User/globalStorage/state.vscdb"
+    paths = {}
+
+    for vscode_dir in VSCODE_DIRS:
+        state_file = os.path.join(
+            os.environ["HOME"], ".config", vscode_dir, "User/globalStorage/state.vscdb"
         )
-    )
-    cur = con.cursor()
-    rows = cur.execute(
-        "SELECT value FROM ItemTable WHERE key = 'history.recentlyOpenedPathsList'"
-    )
-    data = json.loads(rows.fetchone()[0])
-    con.close()
-    return [
-        "~" + path[len(os.environ["HOME"]) :] if os.environ["HOME"] in path else path
-        for path in [i["folderUri"][7:] for i in data["entries"] if "folderUri" in i]
-    ]
+
+        if not os.path.exists(state_file):
+            continue
+
+        con = sqlite3.connect(state_file)
+        cur = con.cursor()
+        rows = cur.execute(
+            "SELECT value FROM ItemTable WHERE key = 'history.recentlyOpenedPathsList'"
+        )
+        data = json.loads(rows.fetchone()[0])
+        con.close()
+        paths.update(
+            {
+                "~" + path[len(os.environ["HOME"]) :] if os.environ["HOME"] in path else path
+                for path in [i["folderUri"][7:] for i in data["entries"] if "folderUri" in i]
+            }
+        )
 
 
 class Runner(dbus.service.Object):
