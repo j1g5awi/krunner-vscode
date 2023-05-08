@@ -33,7 +33,7 @@ class Match(NamedTuple):
 
 # Read path_list from database
 def get_path_list():
-    paths = {}
+    paths = set()
 
     for vscode_dir in VSCODE_DIRS:
         state_file = os.path.join(
@@ -56,6 +56,7 @@ def get_path_list():
                 for path in [i["folderUri"][7:] for i in data["entries"] if "folderUri" in i]
             }
         )
+    return paths
 
 
 class Runner(dbus.service.Object):
