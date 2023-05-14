@@ -2,6 +2,8 @@ import difflib
 import json
 import os
 import sqlite3
+import sys
+from operator import attrgetter
 from pathlib import Path
 from typing import NamedTuple
 
@@ -115,6 +117,16 @@ class Runner(dbus.service.Object):
             os.system("xdg-open  " + data)
 
 
-runner = Runner()
-loop = GLib.MainLoop()
-loop.run()
+def main():
+    runner = Runner()
+    if sys.argv[1:]:
+        # Manual search - useful for local testing
+        for match in sorted(runner.Match(sys.argv[1]), key=attrgetter("relevance")):
+            print(match.data, match.relevance)
+    else:
+        loop = GLib.MainLoop()
+        loop.run()
+
+
+if __name__ == "__main__":
+    main()
