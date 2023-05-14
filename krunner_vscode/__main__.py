@@ -1,3 +1,4 @@
+import difflib
 import json
 import os
 import sqlite3
@@ -29,6 +30,21 @@ class Match(NamedTuple):
     type: int
     relevance: float
     properties: dict
+
+
+def get_matches(paths, query):
+    """
+    Equivalent to `difflib.get_close_matches`, but returning the ratio too
+    """
+    matches = []
+    s = difflib.SequenceMatcher()
+    s.set_seq2(query)
+
+    for path in paths:
+        s.set_seq1(path)
+        matches.append((s.ratio(), path))
+
+    return matches
 
 
 # Read path_list from database
@@ -72,17 +88,18 @@ class Runner(dbus.service.Object):
     @dbus.service.method(iface, in_signature="s", out_signature="a(sssida{sv})")
     def Match(self, query: str):
         # data, display text, icon, type (Plasma::QueryType), relevance (0-1), properties (subtext, category and urls)
+        matches = get_matches(get_path_list(), query)
+
         return [
             Match(
                 path,
                 Path(path).name,
                 "com.visualstudio.code.oss",
                 100,
-                1.0,
+                ratio,
                 {"subtext": path},
             )
-            for path in get_path_list()
-            if query.lower() in Path(path).name.lower()
+            for ratio, path in matches
         ]
 
     @dbus.service.method(iface, out_signature="a(sss)")
