@@ -24,6 +24,8 @@ VSCODE_DIRS = [
     "VSCodium"
 ]
 
+HOME = str(Path.home())
+
 
 class Match(NamedTuple):
     data: str
@@ -68,12 +70,20 @@ def get_path_list():
         )
         data = json.loads(rows.fetchone()[0])
         con.close()
-        paths.update(
-            {
-                "~" + path[len(os.environ["HOME"]) :] if os.environ["HOME"] in path else path
-                for path in [i["folderUri"][7:] for i in data["entries"] if "folderUri" in i]
-            }
-        )
+
+        for entry in data["entries"]:
+            if "folderUri" not in entry:
+                continue
+
+            path = entry["folderUri"].replace("file://", "")
+
+            if not os.path.exists(path):
+                continue
+
+            if path.startswith(HOME):
+                path = path.replace(HOME, "~", 1)
+
+            paths.add(path)
     return paths
 
 
@@ -90,8 +100,6 @@ class Runner(dbus.service.Object):
     @dbus.service.method(iface, in_signature="s", out_signature="a(sssida{sv})")
     def Match(self, query: str):
         # data, display text, icon, type (Plasma::QueryType), relevance (0-1), properties (subtext, category and urls)
-        matches = get_matches(get_path_list(), query)
-
         return [
             Match(
                 path,
@@ -101,7 +109,7 @@ class Runner(dbus.service.Object):
                 ratio,
                 {"subtext": path},
             )
-            for ratio, path in matches
+            for ratio, path in get_matches(get_path_list(), query)
         ]
 
     @dbus.service.method(iface, out_signature="a(sss)")
