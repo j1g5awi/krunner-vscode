@@ -1,5 +1,6 @@
 import json
 import os
+import subprocess
 import sqlite3
 from pathlib import Path
 from typing import NamedTuple
@@ -92,11 +93,10 @@ class Runner(dbus.service.Object):
 
     @dbus.service.method(iface, in_signature="ss")
     def Run(self, data: str, action_id: str):
-        if not action_id:
-            os.system("code " + data)
-        else:
-            os.system("xdg-open  " + data)
-
+        subprocess.run([
+            "code" if not action_id else "xdg-open",
+            data
+        ])
 
 runner = Runner()
 loop = GLib.MainLoop()
