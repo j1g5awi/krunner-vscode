@@ -95,8 +95,8 @@ class Runner(dbus.service.Object):
     def Run(self, data: str, action_id: str):
         subprocess.run([
             "code" if not action_id else "xdg-open",
-            data
-        ])
+            str(data)
+        ], shell=True)
 
 runner = Runner()
 loop = GLib.MainLoop()
