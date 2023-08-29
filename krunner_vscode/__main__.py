@@ -1,7 +1,10 @@
+import difflib
 import json
 import os
 import subprocess
 import sqlite3
+import sys
+from operator import attrgetter
 from pathlib import Path
 from typing import NamedTuple
 
@@ -22,6 +25,8 @@ VSCODE_DIRS = [
     "VSCodium"
 ]
 
+HOME = str(Path.home())
+
 
 class Match(NamedTuple):
     data: str
@@ -30,6 +35,21 @@ class Match(NamedTuple):
     type: int
     relevance: float
     properties: dict
+
+
+def get_matches(paths, query):
+    """
+    Equivalent to `difflib.get_close_matches`, but returning the ratio too
+    """
+    matches = []
+    s = difflib.SequenceMatcher()
+    s.set_seq2(query)
+
+    for path in paths:
+        s.set_seq1(path)
+        matches.append((s.ratio(), path))
+
+    return matches
 
 
 # Read path_list from database
@@ -51,12 +71,20 @@ def get_path_list():
         )
         data = json.loads(rows.fetchone()[0])
         con.close()
-        paths.update(
-            {
-                "~" + path[len(os.environ["HOME"]) :] if os.environ["HOME"] in path else path
-                for path in [i["folderUri"][7:] for i in data["entries"] if "folderUri" in i]
-            }
-        )
+
+        for entry in data["entries"]:
+            if "folderUri" not in entry:
+                continue
+
+            path = entry["folderUri"].replace("file://", "")
+
+            if not os.path.exists(path):
+                continue
+
+            if path.startswith(HOME):
+                path = path.replace(HOME, "~", 1)
+
+            paths.add(path)
     return paths
 
 
@@ -79,11 +107,10 @@ class Runner(dbus.service.Object):
                 Path(path).name,
                 "com.visualstudio.code.oss",
                 100,
-                1.0,
+                ratio,
                 {"subtext": path},
             )
-            for path in get_path_list()
-            if query.lower() in Path(path).name.lower()
+            for ratio, path in get_matches(get_path_list(), query)
         ]
 
     @dbus.service.method(iface, out_signature="a(sss)")
@@ -98,6 +125,16 @@ class Runner(dbus.service.Object):
             str(data)
         ], shell=True)
 
-runner = Runner()
-loop = GLib.MainLoop()
-loop.run()
+def main():
+    runner = Runner()
+    if sys.argv[1:]:
+        # Manual search - useful for local testing
+        for match in sorted(runner.Match(sys.argv[1]), key=attrgetter("relevance")):
+            print(match.data, match.relevance)
+    else:
+        loop = GLib.MainLoop()
+        loop.run()
+
+
+if __name__ == "__main__":
+    main()
